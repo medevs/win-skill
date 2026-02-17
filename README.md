@@ -9,6 +9,7 @@ AI coding assistants tend to:
 - Say "looks good" without proving coverage
 - Miss error states, security implications, and race conditions
 - Fix symptoms instead of root causes
+- Build for the test case in front of them, not for every real user and scenario
 
 ## The Solution
 
@@ -25,11 +26,12 @@ WIN injects a structured 5-phase methodology that runs automatically on non-triv
 ### What It Enforces
 
 - **6 mandatory UI states** for every component: loading, empty, error, success, partial, stale
-- **6 mandatory test categories**: happy path, boundary, error path, state transition, security, regression
+- **7 mandatory test categories**: happy path, boundary, error path, state transition, security, assumption, regression
+- **Assumption discovery**: forces the agent to identify what the current context is assuming about users, data, and usage — then challenge each assumption
 - **Input space analysis**: valid, boundary, invalid, malicious, concurrent inputs
 - **Failure mode analysis**: slow, failed, unexpected, partial success, retry-while-in-flight
 - **Security threat model**: auth, authz, data exposure, injection, rate limiting
-- **17-point ship-it checklist** across code quality, completeness, safety, and resilience
+- **18-point ship-it checklist** across code quality, completeness, safety, and resilience
 
 ### When It Activates
 

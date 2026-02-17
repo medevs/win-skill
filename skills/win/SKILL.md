@@ -5,7 +5,8 @@ description: >
   implementing code, fixing bugs, writing tests, analyzing existing code,
   auditing features, reviewing architecture, or investigating issues.
   Forces systematic consideration of all edge cases, failure modes, error
-  scenarios, security implications, and state transitions so nothing gets missed.
+  scenarios, security implications, state transitions, and hidden assumptions
+  so nothing gets missed.
   Do NOT invoke for trivial changes like typos, renames, single-line fixes,
   adding imports, or updating config values.
 ---
@@ -60,14 +61,25 @@ For every external dependency (API call, DB query, file read, third-party servic
 - **Injection**: Any string concatenation in SQL, HTML, or shell commands?
 - **Rate limiting**: Can this endpoint be abused? Is there a cost multiplier (e.g., triggers expensive AI call)?
 
-### 1.5 Impact Analysis
+### 1.5 Assumption Discovery
+
+Before building or fixing anything, step back from the immediate task and ask: **what is the current context assuming?**
+
+- **Identify every assumption** the current task, test case, or bug report is making about who uses this, what data they provide, how they use it, and in what context
+- **Challenge each assumption**: What if a real user doesn't match this assumption? What breaks, degrades, or behaves unexpectedly?
+- **Enumerate what SHOULD work** but isn't being considered — scenarios, user types, data types, or contexts beyond the one in front of you right now
+- **Enumerate what should NOT work** — scenarios the app should explicitly reject, block, or handle gracefully. Are they actually handled, or would they silently break or accidentally be allowed?
+
+Do not use a predefined checklist. The assumptions are different for every app and every feature. You must discover them from the specific context you're working in.
+
+### 1.6 Impact Analysis
 
 - **What existing features could this break?** Trace all callers and consumers.
 - **What data could this corrupt?** Check migration safety, default values, nullable columns.
 - **What performance could this degrade?** New queries without indexes? N+1? Large payloads?
 - **What's the rollback plan?** If this goes wrong in production, how do we undo it?
 
-### 1.6 Plan Completeness Checklist
+### 1.7 Plan Completeness Checklist
 
 Before finalizing any plan, verify:
 
@@ -79,6 +91,7 @@ Before finalizing any plan, verify:
 6. Performance implications are noted for any new queries or API calls
 7. Security implications are noted for any new endpoints or data access
 8. Migration safety is confirmed (no data loss, backwards compatible)
+9. Assumptions about users, data, and context have been identified and challenged
 
 ---
 
@@ -114,6 +127,8 @@ After writing each piece of code, verify:
 4. What happens if two users do this simultaneously?
 5. Did I handle the error path in the UI, not just console.log it?
 6. Am I exposing any data the user shouldn't see?
+7. Is this implementation built around assumptions from the current test case? Would it break for a user in a different context?
+8. Are unsupported or invalid scenarios explicitly handled (clear rejection, error message), or will they silently fail or accidentally be allowed?
 
 ---
 
@@ -153,6 +168,10 @@ For every feature or fix, address each category:
 - SQL/XSS payloads in inputs are handled safely
 - Sensitive data isn't leaked in error messages
 
+**Assumption Tests**
+- Test with scenarios beyond the immediate test case — different types of users, data, or contexts the feature should support
+- Test scenarios that should NOT work — verify they are properly rejected with clear feedback, not silently broken or accidentally allowed
+
 **Regression Tests**
 - Existing functionality still works after the change
 - Related features aren't broken by side effects
@@ -183,6 +202,7 @@ When asked to analyze or review existing code:
 - **Identify silent failures** — places where errors are caught but swallowed (empty catch blocks, `.catch(() => {})`, missing error states in UI)
 - **Check null/undefined paths** — what happens when optional data is actually missing? Is the code assuming data always exists?
 - **Verify auth boundaries** — is every endpoint/query properly scoped to the authenticated user?
+- **Challenge assumptions** — is this code built on assumptions about who uses it, what data they provide, or in what context? Would it break for someone in a different situation?
 
 ### 4.2 Bug Investigation
 
@@ -194,6 +214,7 @@ When investigating a bug or unexpected behavior:
 - **Identify what ELSE could break** — fixing the immediate bug is not enough. What related code has the same vulnerability?
 - **Check data integrity** — has the bug corrupted any existing data? Does the fix need a data migration or backfill?
 - **Verify the fix prevents recurrence** — will this same bug happen again for new users, new data, or new features? If yes, fix the root cause, not the symptom
+- **Challenge the assumption that caused the bug** — did this bug exist because the code assumed a specific type of user, data, or context? Does the fix hold for all real-world scenarios, not just the reported case?
 
 ### 4.3 Feature Improvement Analysis
 
@@ -208,6 +229,7 @@ When asked to improve or optimize an existing feature:
   - Does it degrade gracefully under load?
 - **Assess the blast radius** — how many files, functions, and features does this change touch?
 - **Propose with tradeoffs** — every improvement has a cost (complexity, performance, migration). State the tradeoffs explicitly
+- **Check assumption coverage** — does the current implementation only handle the scenario it was built and tested with, or does it account for the full range of real-world usage?
 
 ### 4.4 Architecture Review
 
@@ -251,6 +273,7 @@ Before declaring ANY task complete, verify every item:
 2. Every edge case identified in planning has code handling it
 3. Error states have user-facing feedback, not just thrown exceptions
 4. The feature works on first use, not just happy path demo
+5. The feature works beyond the specific scenario it was built and tested with — assumptions have been identified and addressed
 
 ### Safety
 1. No new security vulnerabilities (check OWASP top 10)
